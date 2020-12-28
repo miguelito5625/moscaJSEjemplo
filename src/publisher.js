@@ -1,10 +1,19 @@
 var mqtt = require('mqtt');
 
-var client = mqtt.connect('mqtt://localhost');
+var client = mqtt.connect('mqtt://broker.emqx.io');
 
 client.on('connect', function () {
     setInterval(function () {
-        client.publish('myTopic', 'Hello mqtt');
-        console.log('Message Sent');
-    }, 5000);
+        let numero = (Math.random()>=0.5)? 1 : 0;
+        client.publish('mike/5625/luzsalacasamama', numero.toString());
+        console.log('Message Sent:', numero);
+    }, 2000);
+    // setInterval(function () {
+    //     client.publish('mike/5625/luzsala', 'Hola MQTT');
+    //     console.log('Message Sent');
+    // }, 2000);
+    // setInterval(function () {
+    //     client.publish('testTopic', 'Hello mqtt testTopic');
+    //     console.log('Message Sent');
+    // }, 4000);
 });
