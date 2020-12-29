@@ -7,8 +7,11 @@
 void callback(char *topic, byte *payload, unsigned int length1);
 
 //const char *mqtt_server = "broker.emqx.io";
+//char mqtt_server[40] = "broker.emqx.io";
 char mqtt_server[40] = "XXXX";
 char mqtt_topic[80] = "XXXX";
+char mqtt_client_id[30] = "";
+
 
 //flag for saving data
 bool shouldSaveConfig = false;
@@ -21,7 +24,7 @@ PubSubClient client(mqtt_server, 1883, callback, espclient);
 //#define LED_PIN 0
 #define OTHER_PIN 0
 
-int estadoPin = 1;
+int estadoPin = 0;
 
 //for LED status
 #include <Ticker.h>
@@ -58,7 +61,6 @@ void setup()
   EEPROM.begin(512);
 
 
-
   WiFi.mode(WIFI_STA); // explicitly set mode, esp defaults to STA+AP
   // put your setup code here, to run once:
   //  Serial.begin(115200);
@@ -66,6 +68,8 @@ void setup()
   //set led pin as output
   pinMode(LED, OUTPUT);
   pinMode(OTHER_PIN, OUTPUT);
+  digitalWrite(OTHER_PIN, estadoPin);
+
   // start ticker with 0.5 because we start in AP mode and try to connect
   ticker.attach(0.6, tick);
 
@@ -80,18 +84,11 @@ void setup()
   //reset settings - for testing
   // wm.resetSettings();
 
-
   //set callback that gets called when connecting to previous WiFi fails, and enters Access Point mode
   wm.setAPCallback(configModeCallback);
 
-
   wm.addParameter(&custom_mqtt_server);
   wm.addParameter(&custom_mqtt_topic);
-
-
-
-
-
 
   //fetches ssid and pass and tries to connect
   //if it does not connect it starts an access point with the specified name
@@ -108,7 +105,6 @@ void setup()
   //if you get here you have connected to the WiFi
   Serial.println("connected...yeey :)");
 
-
   strcpy(mqtt_server, custom_mqtt_server.getValue());
   strcpy(mqtt_topic, custom_mqtt_topic.getValue());
 
@@ -124,22 +120,21 @@ void setup()
   } else {
     strcpy(mqtt_server, read_String(350).c_str());
     strcpy(mqtt_topic, read_String(400).c_str());
-    Serial.println("prueba mqtt server en eeprom: " + read_String(350));
-    Serial.println("prueba mqtt topic en eeprom: " + read_String(400));
+    //    Serial.println("prueba mqtt server en eeprom: " + read_String(350));
+    //    Serial.println("prueba mqtt topic en eeprom: " + read_String(400));
 
   }
 
   Serial.println("EL MQTT SERVER: " + (String)mqtt_server);
   Serial.println("EL MQTT TOPIC: " + (String)mqtt_topic);
 
-
-
-
+  String generateClientId = "Esp8266Client" + generarId(10);
+  strcpy(mqtt_client_id, generateClientId.c_str());
+  Serial.println("EL MQTT CLIENT ID: " + (String)mqtt_client_id);
 
   ticker.detach();
   //keep LED on
   digitalWrite(LED, LOW);
-
 
   reconnect();
 }
@@ -149,10 +144,7 @@ void callback(char *topic, byte *payload, unsigned int length1)
   Serial.print("Mensaje del topic: [");
   Serial.print(topic);
   Serial.println("]");
-
   String myString = "";
-
-
   for (int i = 0; i < length1; i++)
   {
     //        Serial.print(payload[i]);
@@ -162,11 +154,6 @@ void callback(char *topic, byte *payload, unsigned int length1)
   Serial.println("Datos recibidos: " + myString);
   estadoPin = myString.toInt();
 
-  //    if (payload[0] == 49)
-  //        digitalWrite(LED, HIGH); //ASCII VALUE OF '1' IS 49
-  //    else if (payload[0] == 50)
-  //        digitalWrite(LED, LOW); //ASCII VALUE OF '2' IS 50
-  //    Serial.println();
 }
 
 void reconnect()
@@ -180,7 +167,7 @@ void reconnect()
   //    }
   while (!client.connected())
   {
-    if (client.connect("ESP8266Client123456789"))
+    if (client.connect(mqtt_client_id))
     {
       Serial.println("Conectado al MQTT server: " + (String)mqtt_server);
 
@@ -219,32 +206,13 @@ void controlEncendido() {
 
 void modoFiesta() {
   if (estadoPin == 2) {
-    Serial.println("Secuencia Modo fiesta empezado");
+    client.publish("mike/5625/recibido", "modo fiesta");
     digitalWrite(OTHER_PIN, 1);
-    delay(random(200, 800));
+    delay(random(100, 800));
     digitalWrite(OTHER_PIN, 0);
-    delay(random(200, 800));
-    digitalWrite(OTHER_PIN, 1);
-    delay(random(200, 800));
-    digitalWrite(OTHER_PIN, 0);
-    delay(random(200, 800));
-    digitalWrite(OTHER_PIN, 1);
-    delay(random(200, 800));
-    digitalWrite(OTHER_PIN, 0);
-    delay(random(200, 800));
-    digitalWrite(OTHER_PIN, 1);
-    delay(random(200, 800));
-    digitalWrite(OTHER_PIN, 0);
-    delay(random(200, 800));
-    digitalWrite(OTHER_PIN, 1);
-    delay(random(200, 800));
-    digitalWrite(OTHER_PIN, 0);
-    delay(random(200, 800));
-    Serial.println("Secuencia Modo fiesta terminado");
+    delay(random(100, 800));
   }
 }
-
-
 
 void writeString(char add, String data)
 {
@@ -274,4 +242,13 @@ String read_String(char add)
   }
   data[len] = '\0';
   return String(data);
+}
+
+
+String generarId(int tamanio) {
+  String id = "";
+  for (int i = 0; i <= tamanio; i++) {
+    id += (String)random(0, 9);
+  }
+  return id;
 }
